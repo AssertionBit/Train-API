@@ -21,8 +21,8 @@ dependencies {
     implementation  'org.springframework.boot:spring-boot-starter-jdbc'
     implementation  'org.springframework.boot:spring-boot-starter-jooq'
     implementation  'org.springframework.boot:spring-boot-starter-webflux'
-    implementation  'org.jooq:jooq:3.18.5'
-    jooqCodegen  'org.jooq:jooq-meta-extensions:3.18.5'
+    implementation  'org.jooq:jooq:3.19.3'
+    jooqCodegen  'org.jooq:jooq-meta-extensions:3.19.3'
     jooqCodegen 'org.postgresql:postgresql:42.5.4'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
     runtimeOnly     'org.postgresql:postgresql'
@@ -51,7 +51,7 @@ jooq {
                 generate {}
                 target {
                     packageName = "assertionbit.trainapi.jooq"
-                    directory = "./build/generated-src"
+                    directory = "src/main/java"
                 }
             }
         }

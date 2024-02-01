@@ -35,3 +35,6 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### JOOQ ###
+src/main/java/assertionbit/trainapi/jooq
