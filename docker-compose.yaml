@@ -1,0 +1,11 @@
+version: '3'
+
+services:
+  database:
+    image: postgres:latest
+    environment:
+      - POSTGRES_PASSWORD=example-secret-password
+      - POSTGRES_USER=train-app
+      - POSTGRES_DB=train-app
+    ports:
+      - 5432:5432
