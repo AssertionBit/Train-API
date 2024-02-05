@@ -11,12 +11,12 @@ INSERT INTO public.wagon (id, code) VALUES
     (0, 'A001'),
     (1, 'A00B');
 
-INSERT INTO public.sits (id, number, is_top, is_taken) VALUES
-    (0, 1, false, false),
-    (1, 2, true, true);
+INSERT INTO public.sits (id, number, is_top) VALUES
+    (0, 1, false),
+    (1, 2, true);
 
-INSERT INTO public.route_trains (id, route_id, train_id, begin_time, end_time) VALUES
-    (0, 0, 0, now(), now() + interval '6 hours');
+INSERT INTO public.route_trains (id, route_id, train_id, begin_time, end_time, is_gone) VALUES
+    (0, 0, 0, now(), now() + interval '6 hours', false);
 
 INSERT INTO public.train_wagons (id, train_id, wagon_id) VALUES
     (0, 0, 0),
