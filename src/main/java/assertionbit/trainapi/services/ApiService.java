@@ -33,7 +33,7 @@ public class ApiService {
         var allTrainsInfo = new ArrayList<HashMap<String, Object>>();
         logger.info("Accepting request for all trains");
         trainRepository
-                .getAllTrains()
+                .getAllTrainsStream()
                 .forEach(obj -> {
                     allTrainsInfo.add(obj.toHashMap());
                 });
@@ -46,6 +46,16 @@ public class ApiService {
                 .status(200)
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(response);
+    }
+
+    @GetMapping("/full")
+    public ResponseEntity<?> getAllDetailed() {
+        var allTrainsInfo = new ArrayList<HashMap<String, Object>>();
+        this.trainRepository.getAllTrainsDetailedStream()
+                .forEach(s -> allTrainsInfo.add(s.toHashMap()));
+        return ResponseEntity
+                .status(200)
+                .body(allTrainsInfo);
     }
 
     @GetMapping("/group")
