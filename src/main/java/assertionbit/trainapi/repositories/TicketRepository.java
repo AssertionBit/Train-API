@@ -7,6 +7,7 @@ import assertionbit.trainapi.jooq.public_.tables.TicketsGroup;
 import org.jooq.DSLContext;
 import org.springframework.stereotype.Service;
 
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -122,16 +123,49 @@ public class TicketRepository {
         }
     }
 
-    public List<Integer> getGroupOfTicket(Long id) {
-        return context
-                .select(routeTickets.GROUP_ID)
-                .from(routeTickets)
-                .where(routeTickets.TICKET_ID.eq(Math.toIntExact(id)))
+    public boolean isGroupDeletable(Long id) {
+        var res = context.select(ticketsGroup.CREATION_DATE)
+                .from(ticketsGroup)
+                .where(ticketsGroup.ID.eq(Math.toIntExact(id)))
                 .fetch()
-                .map(s -> (Integer) s.get("group_id"));
+                .map(s -> (LocalDateTime) s.get("creation_date"));
+
+        if(res.isEmpty()) {
+            return false;
+        }
+
+        return res.get(0).plusHours(2).isAfter(LocalDateTime.now());
     }
 
-    public void deleteTicketGroup(Long id) {}
+    public void deleteTicketGroup(Long id) {
+        var group_ticket_ids = context
+                .select(routeTickets.TICKET_ID)
+                .from(routeTickets)
+                .where(routeTickets.GROUP_ID.eq(Math.toIntExact(id)))
+                .fetch()
+                .map(s -> (Integer) s.get("ticket_id"));
+
+        for(Integer ticketId : group_ticket_ids) {
+            context.delete(routeTickets)
+                    .where(routeTickets.TICKET_ID.eq(ticketId))
+                    .execute();
+            context.delete(tickets)
+                    .where(tickets.ID.eq(ticketId))
+                    .execute();
+        }
+
+        context.delete(ticketsGroup)
+                .where(ticketsGroup.ID.eq(Math.toIntExact(id)))
+                .execute();
+    }
+
+    public boolean isGroupExists(Long id) {
+        return this.context
+            .select(routeTickets.GROUP_ID)
+            .from(routeTickets)
+                .where(routeTickets.GROUP_ID.eq(Math.toIntExact(id)))
+                .fetch().isEmpty();
+    }
 
     protected Long createGroupTicket() {
         return this.context

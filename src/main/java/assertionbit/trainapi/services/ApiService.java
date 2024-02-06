@@ -189,6 +189,27 @@ public class ApiService {
         return ResponseEntity.status(200).build();
     }
 
+    @DeleteMapping("/ticket/group/{groupId}")
+    public ResponseEntity<?> deleteGroup(
+        @PathVariable Long groupId
+    ) {
+        if(!ticketRepository.isGroupExists(groupId)) {
+            return ResponseEntity
+                    .status(400)
+                    .body(new ErrorResponse("Such group doesn't exists"));
+        }
+
+        if(!ticketRepository.isGroupDeletable(groupId)) {
+            return ResponseEntity
+                    .status(400)
+                    .body(new ErrorResponse("Could not delete group before 2 hours of start"));
+        }
+
+        ticketRepository.deleteTicketGroup(groupId);
+
+        return ResponseEntity.status(200).build();
+    }
+
     @DeleteMapping("/ticket/reserve/{ticketId}")
     public ResponseEntity<?> reserveTicket(
             @PathVariable Long ticketId
@@ -219,7 +240,7 @@ public class ApiService {
                     .body(new ErrorResponse("Internal error: begin time doesn't exist on route_trains"));
         }
 
-        if(!begin_time.get(0).minusHours(2).isBefore(LocalDateTime.now())) {
+        if(!begin_time.get(0).plusHours(2).isAfter(LocalDateTime.now())) {
             return ResponseEntity
                     .status(400)
                     .body(new ErrorResponse("Could not delete after two hours of estimated time"));
