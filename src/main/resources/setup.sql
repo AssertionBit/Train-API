@@ -25,6 +25,18 @@ CREATE TABLE IF NOT EXISTS sits (
     PRIMARY KEY(id)
 );
 
+CREATE TABLE IF NOT EXISTS tickets (
+    id int UNIQUE NOT NULL,
+    creation_date TIMESTAMP NOT NULL,
+    PRIMARY KEY(id)
+);
+
+CREATE TABLE IF NOT EXISTS tickets_group (
+    id int UNIQUE NOT NULL,
+    creation_date TIMESTAMP NOT NULL,
+    PRIMARY KEY(id)
+);
+
 CREATE TABLE IF NOT EXISTS route_trains (
     id int UNIQUE NOT NULL,
     route_id int NOT NULL,
@@ -56,3 +68,15 @@ CREATE TABLE IF NOT EXISTS public.wagon_sits (
     PRIMARY KEY(id)
 );
 
+CREATE TABLE IF NOT EXISTS public.route_tickets (
+    id int NOT NULL,
+    route_id int NOT NULL,
+    ticket_id int NOT NULL,
+    sit_id int NOT NULL,
+    group_id int,
+    FOREIGN KEY(route_id) REFERENCES routes(id),
+    FOREIGN KEY(ticket_id) REFERENCES tickets(id),
+    FOREIGN KEY(sit_id) REFERENCES sits(id),
+    FOREIGN KEY(group_id) REFERENCES tickets_group(id),
+    PRIMARY KEY(id)
+);

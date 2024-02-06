@@ -57,8 +57,8 @@ public class ApiService {
         var allRoutesInfo = new ArrayList<HashMap<String, Object>>();
 
         var data = detailed.equalsIgnoreCase("true") ?
-            routesRepository.getAllRoutesDetailed().stream().map(RouteEntity::toHashMap)
-            : routesRepository.getAllRoutes().stream().map(RouteEntity::toHashMap)
+                routesRepository.getAllRoutesDetailed().stream().map(RouteEntity::toHashMap)
+                : routesRepository.getAllRoutes().stream().map(RouteEntity::toHashMap)
                 .peek(s -> s.remove("trains"));
 
         data.forEach(allRoutesInfo::add);
@@ -66,15 +66,5 @@ public class ApiService {
         return ResponseEntity
                 .status(200)
                 .body(allRoutesInfo);
-    }
-
-    @GetMapping("/group")
-    public ResponseEntity<?> reserveGroup() {
-        return ResponseEntity.status(200).build();
-    }
-
-    @PostMapping
-    public ResponseEntity<?> postCancelTicket() {
-        return ResponseEntity.status(200).build();
     }
 }

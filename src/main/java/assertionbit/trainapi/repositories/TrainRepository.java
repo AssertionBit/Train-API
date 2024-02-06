@@ -58,24 +58,19 @@ public class TrainRepository {
 
     public ArrayList<TrainEntity> getAllTrainsDetailed() {
         ArrayList<TrainEntity> entities = getAllTrains();
-        var result = this.context
-                .select(
-                        TrainWagons.TRAIN_WAGONS.TRAIN_ID,
-                        this.wagonRepository.accessor.ID,
-                        this.wagonRepository.accessor.CODE
-                )
-                .from(TrainWagons.TRAIN_WAGONS)
-                .join(this.wagonRepository.accessor)
-                .on(TrainWagons.TRAIN_WAGONS.WAGON_ID.eq(this.wagonRepository.accessor.ID))
-                .fetch();
 
-        for(TrainEntity train : entities) {
-            train.setWagons(result
+        for(TrainEntity entity : entities) {
+            var train_wagons = new ArrayList<WagonEntity>();
+            this.context
+                    .select(TrainWagons.TRAIN_WAGONS.WAGON_ID)
+                    .from(TrainWagons.TRAIN_WAGONS)
+                    .where(TrainWagons.TRAIN_WAGONS.TRAIN_ID.eq(Math.toIntExact(entity.getId())))
+                    .fetch()
                     .stream()
-                    .filter(s -> Objects.equals(Long.valueOf((Integer) s.get("train_id")), train.getId()))
-                    .map(s -> WagonEntity.fromRecord(s))
-                    .collect(Collectors.toList())
-            );
+                    .map(s -> (Integer) s.get("wagon_id"))
+                    .forEach(s -> train_wagons.add(this.wagonRepository.getWagonByIDExtended(s)));
+
+            entity.setWagons(train_wagons);
         }
 
         return entities;
