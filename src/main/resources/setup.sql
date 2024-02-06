@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS routes (
-    id int UNIQUE NOT NULL,
+    id BIGSERIAL UNIQUE NOT NULL,
     start varchar(256) NOT NULL,
     "end" varchar(256) NOT NULL,
     estimated_time int NOT NULL,
@@ -7,38 +7,38 @@ CREATE TABLE IF NOT EXISTS routes (
 );
 
 CREATE TABLE IF NOT EXISTS trains (
-    id int UNIQUE NOT NULL,
+    id BIGSERIAL UNIQUE NOT NULL,
     name varchar(256) NOT NULL,
     PRIMARY KEY(id)
 );
 
 CREATE TABLE IF NOT EXISTS wagon (
-    id int UNIQUE NOT NULL,
+    id BIGSERIAL UNIQUE NOT NULL,
     code varchar(256) NOT NULL,
     PRIMARY KEY(id)
 );
 
 CREATE TABLE IF NOT EXISTS sits (
-    id int UNIQUE NOT NULL,
+    id BIGSERIAL UNIQUE NOT NULL,
     number varchar(256) NOT NULL,
     is_top boolean NOT NULL,
     PRIMARY KEY(id)
 );
 
 CREATE TABLE IF NOT EXISTS tickets (
-    id int UNIQUE NOT NULL,
+    id BIGSERIAL UNIQUE NOT NULL,
     creation_date TIMESTAMP NOT NULL,
     PRIMARY KEY(id)
 );
 
 CREATE TABLE IF NOT EXISTS tickets_group (
-    id int UNIQUE NOT NULL,
+    id BIGSERIAL UNIQUE NOT NULL,
     creation_date TIMESTAMP NOT NULL,
     PRIMARY KEY(id)
 );
 
 CREATE TABLE IF NOT EXISTS route_trains (
-    id int UNIQUE NOT NULL,
+    id BIGSERIAL UNIQUE NOT NULL,
     route_id int NOT NULL,
     train_id int NOT NULL,
     begin_time TIMESTAMP NOT NULL,
@@ -50,7 +50,7 @@ CREATE TABLE IF NOT EXISTS route_trains (
 );
 
 CREATE TABLE IF NOT EXISTS public.train_wagons (
-    id int UNIQUE NOT NULL,
+    id BIGSERIAL UNIQUE NOT NULL,
     train_id int NOT NULL,
     wagon_id int NOT NULL,
     FOREIGN KEY(train_id) REFERENCES trains(id),
@@ -59,7 +59,7 @@ CREATE TABLE IF NOT EXISTS public.train_wagons (
 );
 
 CREATE TABLE IF NOT EXISTS public.wagon_sits (
-    id int UNIQUE NOT NULL,
+    id BIGSERIAL UNIQUE NOT NULL,
     wagon_id int NOT NULL,
     sit_id int NOT NULL,
     is_taken boolean NOT NULL,
@@ -69,7 +69,7 @@ CREATE TABLE IF NOT EXISTS public.wagon_sits (
 );
 
 CREATE TABLE IF NOT EXISTS public.route_tickets (
-    id int NOT NULL,
+    id BIGSERIAL NOT NULL,
     route_id int NOT NULL,
     ticket_id int NOT NULL,
     sit_id int NOT NULL,

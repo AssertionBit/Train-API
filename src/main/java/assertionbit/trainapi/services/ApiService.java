@@ -1,17 +1,23 @@
 package assertionbit.trainapi.services;
 
 import assertionbit.trainapi.entities.RouteEntity;
+import assertionbit.trainapi.entities.TicketEntity;
 import assertionbit.trainapi.entities.TrainEntity;
+import assertionbit.trainapi.messages.ErrorResponse;
 import assertionbit.trainapi.repositories.RoutesRepository;
+import assertionbit.trainapi.repositories.TicketRepository;
 import assertionbit.trainapi.repositories.TrainRepository;
+import assertionbit.trainapi.repositories.WagonRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -19,15 +25,21 @@ import java.util.HashMap;
 @RequestMapping(value = "/api/v1/")
 public class ApiService {
     protected Logger logger = LoggerFactory.getLogger(ApiService.class);
+    protected TicketRepository ticketRepository;
     protected TrainRepository trainRepository;
     protected RoutesRepository routesRepository;
+    protected WagonRepository wagonRepository;
 
     public ApiService(
+            TicketRepository ticketRepository,
             TrainRepository trainRepository,
-            RoutesRepository routesRepository
+            RoutesRepository routesRepository,
+            WagonRepository wagonRepository
     ) {
+        this.ticketRepository = ticketRepository;
         this.trainRepository = trainRepository;
         this.routesRepository = routesRepository;
+        this.wagonRepository = wagonRepository;
     }
 
     @GetMapping("/trains")
@@ -66,5 +78,62 @@ public class ApiService {
         return ResponseEntity
                 .status(200)
                 .body(allRoutesInfo);
+    }
+
+    @PostMapping("/ticket/reserve/{routeId}/{trainId}/{wagonId}/{sitId}")
+    public ResponseEntity<?> reserveTicket(
+            @PathVariable Long routeId,
+            @PathVariable Long trainId,
+            @PathVariable Long wagonId,
+            @PathVariable Long sitId
+    ) {
+        var trains = trainRepository.getAllTrainsDetailedStream();
+        var train = trains
+                .filter(trainEntity -> trainEntity.getId().equals(trainId))
+                .toList();
+        if(train.isEmpty()) {
+            return ResponseEntity
+                    .status(404)
+                    .body(new ErrorResponse("No such train found"));
+        }
+
+        // Wagon selector
+        var wagon = train.get(0).getWagons().stream()
+                .filter(s -> s.getId().equals(wagonId))
+                .toList();
+        if(wagon.isEmpty()) {
+            return ResponseEntity
+                    .status(404)
+                    .body(new ErrorResponse("No such wagon of train found found"));
+        }
+
+        // Sit array for filtering
+        var sit = wagon.get(0).getSitEntities().stream()
+                .filter(s -> s.getId().equals(sitId))
+                .toList();
+        if(sit.isEmpty()) {
+            return ResponseEntity
+                    .status(404)
+                    .body(new ErrorResponse("Sit doesn't exists in this wagon"));
+        }
+
+        if(sit.get(0).getIs_taken()) {
+            return ResponseEntity
+                    .status(400)
+                    .body(new ErrorResponse("Sit already taken"));
+        }
+
+        var entity = new TicketEntity();
+        entity.setCreation_date(LocalDateTime.now());
+
+        ticketRepository.addTicket(
+                entity,
+                routeId,
+                sitId
+        );
+
+        return ResponseEntity
+                .status(200)
+                .build();
     }
 }

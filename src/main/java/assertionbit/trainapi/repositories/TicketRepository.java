@@ -9,6 +9,7 @@ import org.jooq.Record;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
@@ -49,7 +50,24 @@ public class TicketRepository {
                 .from(routeTickets)
                 .fetch()
                 .stream()
-                .map(s -> (Integer) s.get("ticket_id"))
+                .map(s -> (Integer) s.get("sit_id"))
                 .toList();
+    }
+
+    public void addTicket(TicketEntity ticketEntity, Long routeId, Long sitId) {
+        var id = context.insertInto(tickets,
+                        tickets.CREATION_DATE)
+                .values(Collections.singleton(ticketEntity.getCreation_date()))
+                .execute();
+
+        ticketEntity.setId((long) id);
+
+        context.insertInto(routeTickets,
+                routeTickets.ROUTE_ID, routeTickets.SIT_ID, routeTickets.TICKET_ID)
+                .values(
+                        Math.toIntExact(routeId),
+                        Math.toIntExact(sitId),
+                        Math.toIntExact(ticketEntity.getId()))
+                .execute();
     }
 }
