@@ -17,8 +17,6 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.stream.Collectors;
-
 
 @Service
 @RestController
@@ -131,6 +129,49 @@ public class ApiService {
                 routeId,
                 sitId
         );
+
+        return ResponseEntity
+                .status(200)
+                .build();
+    }
+
+    @DeleteMapping("/ticket/reserve/{ticketId}")
+    public ResponseEntity<?> reserveTicket(
+            @PathVariable Long ticketId
+    ) {
+        var ticket_list = ticketRepository
+                .getAllTicketsStream()
+                .filter(s -> s.getId().equals(ticketId))
+                .toList();
+
+        if(ticket_list.isEmpty()) {
+            return ResponseEntity
+                    .status(404)
+                    .body(new ErrorResponse("Ticket not found"));
+        }
+
+        var route_id = ticketRepository.getTicketRoute(ticketId);
+        if(route_id.isEmpty()) {
+            return ResponseEntity
+                    .status(500)
+                    .body(new ErrorResponse("Internal error: ticket exist when route doesn't"));
+        }
+
+        var begin_time = routesRepository
+                .getBeginTimeById(Long.valueOf(route_id.get(0)));
+        if(begin_time.isEmpty()) {
+            return ResponseEntity
+                    .status(500)
+                    .body(new ErrorResponse("Internal error: begin time doesn't exist on route_trains"));
+        }
+
+        if(!begin_time.get(0).minusHours(2).isBefore(LocalDateTime.now())) {
+            return ResponseEntity
+                    .status(400)
+                    .body(new ErrorResponse("Could not delete after two hours of estimated time"));
+        }
+
+        ticketRepository.deleteTicket(ticketId);
 
         return ResponseEntity
                 .status(200)

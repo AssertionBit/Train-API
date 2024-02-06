@@ -10,7 +10,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -29,6 +32,14 @@ public class RoutesRepository {
     ) {
         this.context = context;
         this.trainRepository = trainRepository;
+    }
+
+    public List<LocalDateTime> getBeginTimeById(Long id) {
+        return context
+                .select(RouteTrains.ROUTE_TRAINS.BEGIN_TIME)
+                .from(RouteTrains.ROUTE_TRAINS)
+                .fetch()
+                .map(s -> (LocalDateTime) s.get("begin_time"));
     }
 
     public ArrayList<RouteEntity> getAllRoutes() {

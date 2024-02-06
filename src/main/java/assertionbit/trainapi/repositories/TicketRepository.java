@@ -58,9 +58,11 @@ public class TicketRepository {
         var id = context.insertInto(tickets,
                         tickets.CREATION_DATE)
                 .values(Collections.singleton(ticketEntity.getCreation_date()))
-                .execute();
+                .returningResult(tickets.ID)
+                .fetchOne()
+                .into(long.class);
 
-        ticketEntity.setId((long) id);
+        ticketEntity.setId(id);
 
         context.insertInto(routeTickets,
                 routeTickets.ROUTE_ID, routeTickets.SIT_ID, routeTickets.TICKET_ID)
@@ -69,5 +71,33 @@ public class TicketRepository {
                         Math.toIntExact(sitId),
                         Math.toIntExact(ticketEntity.getId()))
                 .execute();
+    }
+
+    public List<Integer> getTicketRoute(Long ticketId) {
+        return context.select(routeTickets.ROUTE_ID)
+                .from(routeTickets)
+                .fetch()
+                .map(s -> (Integer) s.get("route_id"));
+    }
+
+    public void deleteTicketGroup(Long id) {
+    }
+
+    public void deleteTicket(Long id) {
+        context.delete(routeTickets)
+                .where(routeTickets.TICKET_ID.eq(Math.toIntExact(id)))
+                .execute();
+        context.delete(tickets)
+                .where(tickets.ID.eq(Math.toIntExact(id)))
+                .execute();
+    }
+
+    public List<Integer> getGroupOfTicket(Long id) {
+        return context
+                .select(routeTickets.GROUP_ID)
+                .from(routeTickets)
+                .where(routeTickets.TICKET_ID.eq(Math.toIntExact(id)))
+                .fetch()
+                .map(s -> (Integer) s.get("group_id"));
     }
 }
