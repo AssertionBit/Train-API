@@ -55,3 +55,4 @@ CREATE TABLE IF NOT EXISTS public.wagon_sits (
     FOREIGN KEY(sit_id) REFERENCES sits(id),
     PRIMARY KEY(id)
 );
+
