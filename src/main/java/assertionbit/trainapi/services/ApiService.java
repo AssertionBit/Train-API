@@ -1,13 +1,12 @@
 package assertionbit.trainapi.services;
 
 import assertionbit.trainapi.entities.RouteEntity;
+import assertionbit.trainapi.entities.SitEntity;
 import assertionbit.trainapi.entities.TicketEntity;
 import assertionbit.trainapi.entities.TrainEntity;
 import assertionbit.trainapi.messages.ErrorResponse;
-import assertionbit.trainapi.repositories.RoutesRepository;
-import assertionbit.trainapi.repositories.TicketRepository;
-import assertionbit.trainapi.repositories.TrainRepository;
-import assertionbit.trainapi.repositories.WagonRepository;
+import assertionbit.trainapi.messages.TicketGroupRequst;
+import assertionbit.trainapi.repositories.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -27,17 +26,20 @@ public class ApiService {
     protected TrainRepository trainRepository;
     protected RoutesRepository routesRepository;
     protected WagonRepository wagonRepository;
+    protected SitsRepository sitsRepository;
 
     public ApiService(
             TicketRepository ticketRepository,
             TrainRepository trainRepository,
             RoutesRepository routesRepository,
-            WagonRepository wagonRepository
+            WagonRepository wagonRepository,
+            SitsRepository sitsRepository
     ) {
         this.ticketRepository = ticketRepository;
         this.trainRepository = trainRepository;
         this.routesRepository = routesRepository;
         this.wagonRepository = wagonRepository;
+        this.sitsRepository = sitsRepository;
     }
 
     @GetMapping("/trains")
@@ -127,12 +129,64 @@ public class ApiService {
         ticketRepository.addTicket(
                 entity,
                 routeId,
-                sitId
+                sitId,
+                null
         );
 
         return ResponseEntity
                 .status(200)
                 .build();
+    }
+
+    @PostMapping("/ticket/group/{routeId}/{trainId}")
+    public ResponseEntity<?> responseGroupTicket(
+        @PathVariable Long routeId,
+        @PathVariable Long trainId,
+        @RequestBody TicketGroupRequst request
+    ) {
+        if(request.sitId.size() != request.wagonId.size()) {
+            return ResponseEntity
+                    .status(400)
+                    .body(new ErrorResponse("WagonId's and sitId's are not equal"));
+        }
+
+        var trains = trainRepository.getAllTrainsDetailedStream();
+        var train = trains
+                .filter(trainEntity -> trainEntity.getId().equals(trainId))
+                .toList();
+        if(train.isEmpty()) {
+            return ResponseEntity
+                    .status(404)
+                    .body(new ErrorResponse("No such train found"));
+        }
+
+        var sitsCollection = new ArrayList<SitEntity>();
+        // Wagons validation
+        for(Integer wagonId : request.wagonId) {
+            // Wagon selector
+            var wagon = train.get(0).getWagons().stream()
+                    .filter(s -> s.getId().equals(wagonId))
+                    .toList();
+            if(wagon.isEmpty()) {
+                return ResponseEntity
+                        .status(404)
+                        .body(new ErrorResponse("No such wagon of train found found"));
+            }
+            sitsCollection.addAll(wagon.get(0).getSitEntities());
+        }
+
+        if(sitsCollection.size() != request.sitId.size()) {
+            return ResponseEntity
+                    .status(400)
+                    .body(new ErrorResponse("No such amount of sits in this train to process"));
+        }
+
+        ticketRepository.addGroupTickets(
+            routeId,
+            request.sitId
+        );
+
+        return ResponseEntity.status(200).build();
     }
 
     @DeleteMapping("/ticket/reserve/{ticketId}")
@@ -171,7 +225,11 @@ public class ApiService {
                     .body(new ErrorResponse("Could not delete after two hours of estimated time"));
         }
 
-        ticketRepository.deleteTicket(ticketId);
+        if(!ticketRepository.deleteTicket(ticketId)) {
+            return ResponseEntity
+                    .status(400)
+                    .body(new ErrorResponse("Ticket in group, deletion not permitted"));
+        }
 
         return ResponseEntity
                 .status(200)

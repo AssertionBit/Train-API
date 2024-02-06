@@ -27,6 +27,10 @@ public class TicketEntity {
         this.creation_date = creation_date;
     }
 
+    public TicketEntity(LocalDateTime creation_date) {
+        this.creation_date = creation_date;
+    }
+
     public Long getId() {
         return id;
     }
