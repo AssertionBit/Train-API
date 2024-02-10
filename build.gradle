@@ -2,7 +2,6 @@ plugins {
     id 'java'
     id 'org.springframework.boot' version '3.3.0-M1'
     id 'io.spring.dependency-management' version '1.1.4'
-    id 'org.jooq.jooq-codegen-gradle' version '3.19.3'
 }
 
 group = 'assertionbit'
@@ -19,12 +18,10 @@ repositories {
 
 dependencies {
     implementation  'org.springframework.boot:spring-boot-starter-jdbc'
-    implementation  'org.springframework.boot:spring-boot-starter-jooq'
     implementation  'org.springframework.boot:spring-boot-starter-webflux'
-    implementation  'org.jooq:jooq:3.19.3'
-    jooqCodegen  'org.jooq:jooq-meta-extensions:3.19.3'
-    jooqCodegen 'org.postgresql:postgresql:42.5.4'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
+    developmentOnly 'org.springframework.boot:spring-boot-docker-compose'
+    developmentOnly 'org.springframework.boot:spring-boot-starter-actuator'
     runtimeOnly     'org.postgresql:postgresql'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.projectreactor:reactor-test'
@@ -32,28 +29,4 @@ dependencies {
 
 tasks.named('test') {
     useJUnitPlatform()
-}
-
-jooq {
-    // configurations {
-        configuration {
-            jdbc {
-                driver = "org.postgresql.Driver"
-                url = "jdbc:postgresql://localhost:5432/train-app"
-                user = "train-app"
-                password = "example-secret-password"
-            }
-            generator {
-                database {
-                    name = 'org.jooq.meta.postgres.PostgresDatabase'
-                    includes = "public.*"
-                }
-                generate {}
-                target {
-                    packageName = "assertionbit.trainapi.jooq"
-                    directory = "src/main/java"
-                }
-            }
-        }
-    // }
 }
