@@ -1,6 +1,5 @@
 package assertionbit.trainapi.entities;
 
-import org.jooq.Record;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -20,15 +19,6 @@ public class WagonEntity {
         result.put("sits", this.getSitEntities());
 
         return result;
-    }
-
-    public static WagonEntity fromRecord(Record record) {
-        var res = new WagonEntity();
-
-        res.setId(Long.valueOf((Integer) record.get("id")));
-        res.setCode((String) record.get("code"));
-
-        return res;
     }
 
     public WagonEntity() {}

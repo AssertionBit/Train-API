@@ -1,0 +1,20 @@
+### Get all information
+GET http://127.0.0.1:8080/api/v1/routes?detailed=true
+
+### Create new ticket
+POST http://127.0.0.1:8080/api/v1/ticket/reserve/0/0/0/0
+
+### Delete ticket
+DELETE http://127.0.0.1:8080/api/v1/ticket/reserve/1
+
+### Generate ticket group
+POST http://127.0.0.1:8080/api/v1/ticket/group/0/0
+Content-Type: application/json
+
+{
+  "wagonId": [0, 0],
+  "sitId": [0, 1]
+}
+
+### Delete ticket group
+DELETE http://localhost:8080/api/v1/ticket/group/1

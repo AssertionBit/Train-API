@@ -2,74 +2,51 @@ package assertionbit.trainapi.repositories;
 
 import assertionbit.trainapi.entities.TrainEntity;
 import assertionbit.trainapi.entities.WagonEntity;
-import assertionbit.trainapi.jooq.public_.tables.TrainWagons;
-import assertionbit.trainapi.jooq.public_.tables.Trains;
 
-import assertionbit.trainapi.jooq.public_.tables.records.TrainWagonsRecord;
-import assertionbit.trainapi.jooq.public_.tables.records.WagonRecord;
-import org.jooq.DSLContext;
-import org.jooq.Record;
-import org.jooq.Result;
+import assertionbit.trainapi.mappers.TrainEntityMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
+import javax.sql.DataSource;
 import java.util.ArrayList;
-import java.util.Objects;
-import java.util.stream.Collectors;
+import java.util.List;
 import java.util.stream.Stream;
 
 @Service
 public class TrainRepository {
-    protected DSLContext context;
+    protected JdbcTemplate context;
     protected Logger logger = LoggerFactory.getLogger(TrainRepository.class);
 
-    protected Trains trainsAccessor;
     protected WagonRepository wagonRepository;
 
     public TrainRepository(
-            DSLContext context,
+            DataSource context,
             WagonRepository wagonRepository
     ) {
         logger.info("Starting train repository");
-        this.context = context;
-        this.trainsAccessor = Trains.TRAINS;
+        this.context = new JdbcTemplate(context);
         this.wagonRepository = wagonRepository;
     }
 
-    public ArrayList<TrainEntity> getAllTrains() {
-        ArrayList<TrainEntity> entities = new ArrayList<>();
-        this.context
-                .select()
-                .from(this.trainsAccessor)
-                .fetch()
-                .forEach(obj -> {
-                    entities.add(new TrainEntity(
-                            Long.valueOf((Integer) obj.get("id")),
-                            (String) obj.get("name")
-                    ));
-                });
-        return entities;
+    public List<TrainEntity> getAllTrains() {
+        return this.context.query(
+                "SELECT * FROM public.trains",
+                new TrainEntityMapper()
+        );
     }
 
     public Stream<TrainEntity> getAllTrainsStream() {
         return getAllTrains().stream();
     }
 
-    public ArrayList<TrainEntity> getAllTrainsDetailed() {
-        ArrayList<TrainEntity> entities = getAllTrains();
+    public List<TrainEntity> getAllTrainsDetailed() {
+        List<TrainEntity> entities = getAllTrains();
 
         for(TrainEntity entity : entities) {
-            var train_wagons = new ArrayList<WagonEntity>();
-            this.context
-                    .select(TrainWagons.TRAIN_WAGONS.WAGON_ID)
-                    .from(TrainWagons.TRAIN_WAGONS)
-                    .where(TrainWagons.TRAIN_WAGONS.TRAIN_ID.eq(Math.toIntExact(entity.getId())))
-                    .fetch()
-                    .stream()
-                    .map(s -> (Integer) s.get("wagon_id"))
-                    .forEach(s -> train_wagons.add(this.wagonRepository.getWagonByIDExtended(s)));
-
+            var train_wagons = this.wagonRepository
+                            .getAllWagonsByTrainID(entity.getId());
             entity.setWagons(train_wagons);
         }
 

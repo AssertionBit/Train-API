@@ -69,7 +69,7 @@ public class ApiService {
         var allRoutesInfo = new ArrayList<HashMap<String, Object>>();
 
         var data = detailed.equalsIgnoreCase("true") ?
-                routesRepository.getAllRoutesDetailed().stream().map(RouteEntity::toHashMap)
+                routesRepository.getAllRoutesDetailedStream().map(RouteEntity::toHashMap)
                 : routesRepository.getAllRoutes().stream().map(RouteEntity::toHashMap)
                 .peek(s -> s.remove("trains"));
 
@@ -161,21 +161,19 @@ public class ApiService {
         }
 
         var sitsCollection = new ArrayList<SitEntity>();
+
         // Wagons validation
-        for(Integer wagonId : request.wagonId) {
-            // Wagon selector
-            var wagon = train.get(0).getWagons().stream()
-                    .filter(s -> s.getId().equals(wagonId))
-                    .toList();
-            if(wagon.isEmpty()) {
+        for(Long wagonId : request.wagonId) {
+            var sits = sitsRepository.getAllSitsByWagonId(wagonId);
+            if(sits.isEmpty()) {
                 return ResponseEntity
                         .status(404)
-                        .body(new ErrorResponse("No such wagon of train found found"));
+                        .body(new ErrorResponse("No such sits of train's wagon found"));
             }
-            sitsCollection.addAll(wagon.get(0).getSitEntities());
+            sitsCollection.addAll(sits);
         }
 
-        if(sitsCollection.size() != request.sitId.size()) {
+        if(sitsCollection.size() < request.sitId.size()) {
             return ResponseEntity
                     .status(400)
                     .body(new ErrorResponse("No such amount of sits in this train to process"));
@@ -233,14 +231,14 @@ public class ApiService {
         }
 
         var begin_time = routesRepository
-                .getBeginTimeById(Long.valueOf(route_id.get(0)));
-        if(begin_time.isEmpty()) {
+                .getBeginTimeById(route_id.get(0));
+        if(begin_time==null) {
             return ResponseEntity
                     .status(500)
                     .body(new ErrorResponse("Internal error: begin time doesn't exist on route_trains"));
         }
 
-        if(!begin_time.get(0).plusHours(2).isAfter(LocalDateTime.now())) {
+        if(!begin_time.plusHours(2).isAfter(LocalDateTime.now())) {
             return ResponseEntity
                     .status(400)
                     .body(new ErrorResponse("Could not delete after two hours of estimated time"));

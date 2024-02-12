@@ -1,6 +1,5 @@
 package assertionbit.trainapi.entities;
 
-import org.jooq.Record;
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
@@ -11,16 +10,6 @@ public class SitEntity {
     protected String number;
     protected Boolean is_top;
     protected Boolean is_taken = false;
-
-    public static SitEntity fromRecord(Record record) {
-        var entity = new SitEntity();
-
-        entity.setId(Long.valueOf((Integer) record.get("id")));
-        entity.setNumber((String) record.get("number"));
-        entity.setIs_top((Boolean) record.get("is_top"));
-
-        return entity;
-    }
 
     public HashMap<String, Object> toHashMap() {
         var result = new HashMap<String, Object>();

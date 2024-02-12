@@ -1,6 +1,5 @@
 package assertionbit.trainapi.entities;
 
-import org.jooq.Record;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -12,15 +11,6 @@ public class TrainEntity {
     protected Long id;
     protected String name;
     protected ArrayList<WagonEntity> wagons = new ArrayList<>();
-
-    public static TrainEntity fromRecord(Record record) {
-        var e = new TrainEntity();
-
-        e.setId(Long.valueOf((Integer) record.get("id")));
-        e.setName((String) record.get("name"));
-
-        return e;
-    }
 
     public HashMap<String, Object> toHashMap() {
         var result = new HashMap<String, Object>();

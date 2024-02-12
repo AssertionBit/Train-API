@@ -10,7 +10,6 @@ import javax.sql.DataSource;
 @Configuration
 @ComponentScan(value = "assertionbit.trainapi")
 public class DataConfiguration {
-
     @Bean
     public DataSource newJdbcTemplate() {
         var driverManager = new DriverManagerDataSource();

@@ -1,58 +1,48 @@
 package assertionbit.trainapi.repositories;
 
+import assertionbit.trainapi.CustomSQLErrorCodeTranslator;
 import assertionbit.trainapi.entities.TicketEntity;
-import assertionbit.trainapi.jooq.public_.tables.RouteTickets;
-import assertionbit.trainapi.jooq.public_.tables.Tickets;
-import assertionbit.trainapi.jooq.public_.tables.TicketsGroup;
-import org.jooq.DSLContext;
+import assertionbit.trainapi.mappers.TicketEntityMapper;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import java.sql.Timestamp;
+import javax.sql.DataSource;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.stream.Stream;
 
 @Service
 public class TicketRepository {
-    protected Tickets tickets = Tickets.TICKETS;
-    protected TicketsGroup ticketsGroup = TicketsGroup.TICKETS_GROUP;
-    protected RouteTickets routeTickets = RouteTickets.ROUTE_TICKETS;
-    protected DSLContext context;
+    protected JdbcTemplate context;
 
     protected TicketRepository(
-            DSLContext context
+            DataSource context
     ) {
-        this.context = context;
+        this.context = new JdbcTemplate(context);
+
+        this.context.setExceptionTranslator(new CustomSQLErrorCodeTranslator());
     }
 
-    public ArrayList<TicketEntity> getAllTickets() {
-        var results = new ArrayList<TicketEntity>();
-
-        this.context
-                .select()
-                .from(tickets)
-                .fetch()
-                .stream()
-                .map(TicketEntity::fromRecord)
-                .forEach(results::add);
-
-        return results;
+    public List<TicketEntity> getAllTickets() {
+        return this.context
+                .query(
+                        "SELECT * FROM public.tickets",
+                        new TicketEntityMapper()
+                );
     }
 
     public Stream<TicketEntity> getAllTicketsStream() {
         return getAllTickets().stream();
     }
 
-    public List<Integer> getAllTakenTicketsId() {
+    public List<Long> getAllTakenTicketsId() {
         return context
-                .select(routeTickets.SIT_ID)
-                .from(routeTickets)
-                .fetch()
-                .stream()
-                .map(s -> (Integer) s.get("sit_id"))
-                .toList();
+                .queryForList(
+                        "SELECT public.route_tickets.sit_id FROM public.route_tickets",
+                        Long.class
+                );
     }
 
     public Long addTicket(
@@ -61,119 +51,155 @@ public class TicketRepository {
             Long sitId,
             Long groupId
     ) {
-        var id = context.insertInto(tickets,
-                        tickets.CREATION_DATE)
-                .values(Collections.singleton(ticketEntity.getCreation_date()))
-                .returningResult(tickets.ID)
-                .fetchOne()
-                .into(long.class);
+        var id = context
+                .queryForObject(
+                        "INSERT INTO public.tickets (creation_date) VALUES (?) RETURNING id",
+                        Long.class,
+                        LocalDateTime.now()
+                );
 
         ticketEntity.setId(id);
 
-        context.insertInto(routeTickets,
-                routeTickets.ROUTE_ID,
-                routeTickets.SIT_ID,
-                routeTickets.TICKET_ID,
-                routeTickets.GROUP_ID)
-                .values(
-                        Math.toIntExact(routeId),
-                        Math.toIntExact(sitId),
-                        Math.toIntExact(ticketEntity.getId()),
-                        groupId == null ? null : Math.toIntExact(groupId)
-                )
-                .execute();
+        context.update(
+            "INSERT INTO public.route_tickets (route_id, sit_id, ticket_id, group_id) VALUES (?, ?, ?, ?)",
+            routeId,
+            sitId,
+            ticketEntity.getId(),
+            groupId == null ? null : Math.toIntExact(groupId)
+        );
 
         return id;
     }
 
-    public List<Integer> getTicketRoute(Long ticketId) {
-        return context.select(routeTickets.ROUTE_ID)
-                .from(routeTickets)
-                .fetch()
-                .map(s -> (Integer) s.get("route_id"));
+    public List<Long> getTicketRoute(Long ticketId) {
+        return context.queryForList(
+            "SELECT (route_id) FROM public.route_tickets WHERE ticket_id=?",
+            Long.class,
+            ticketId
+        );
     }
 
     public boolean deleteTicket(Long id) {
-        var affected = context.delete(routeTickets)
-                .where(
-                    routeTickets.TICKET_ID.eq(Math.toIntExact(id)),
-                    routeTickets.GROUP_ID.isNull()
-                ).execute();
-        if(affected == 0) {
+        var affected = context.queryForList(
+            "SELECT ticket_id FROM public.route_tickets WHERE ticket_id=? AND group_id IS NULL",
+            Long.class,
+            id
+        );
+
+        if(affected.isEmpty()) {
             return false;
         }
-        context.delete(tickets)
-                .where(tickets.ID.eq(Math.toIntExact(id)))
-                .execute();
+
+        for(Long ticketId : affected) {
+            context.update(
+                    "DELETE FROM public.route_tickets WHERE ticket_id=?",
+                    ticketId
+            );
+            context.update(
+                    "DELETE FROM tickets WHERE id=?",
+                    ticketId
+            );
+        }
         return true;
     }
 
     public void addGroupTickets(
             Long routeId,
-            ArrayList<Integer> sits
+            ArrayList<Long> sits
     ) {
         Long id = createGroupTicket();
         for(int i = 0; i < sits.size(); i++) {
             addTicket(
                     new TicketEntity(LocalDateTime.now()),
                     routeId,
-                    Long.valueOf(sits.get(0)),
+                    sits.get(0),
                     id
             );
         }
     }
 
     public boolean isGroupDeletable(Long id) {
-        var res = context.select(ticketsGroup.CREATION_DATE)
-                .from(ticketsGroup)
-                .where(ticketsGroup.ID.eq(Math.toIntExact(id)))
-                .fetch()
-                .map(s -> (LocalDateTime) s.get("creation_date"));
+        var res = context.
+                queryForObject(
+                        "SELECT creation_date FROM public.tickets_group WHERE id=?",
+                        LocalDateTime.class,
+                        id
+                );
 
-        if(res.isEmpty()) {
+        if(res == null) {
             return false;
         }
 
-        return res.get(0).plusHours(2).isAfter(LocalDateTime.now());
+        return res.plusHours(2).isAfter(LocalDateTime.now());
     }
 
     public void deleteTicketGroup(Long id) {
         var group_ticket_ids = context
-                .select(routeTickets.TICKET_ID)
-                .from(routeTickets)
-                .where(routeTickets.GROUP_ID.eq(Math.toIntExact(id)))
-                .fetch()
-                .map(s -> (Integer) s.get("ticket_id"));
+                .queryForList(
+                        "SELECT ticket_id FROM route_tickets WHERE group_id=?",
+                        Long.class,
+                        id
+                );
 
-        for(Integer ticketId : group_ticket_ids) {
-            context.delete(routeTickets)
-                    .where(routeTickets.TICKET_ID.eq(ticketId))
-                    .execute();
-            context.delete(tickets)
-                    .where(tickets.ID.eq(ticketId))
-                    .execute();
+        for(Long ticketId : group_ticket_ids) {
+            context.update(
+                    "DELETE FROM public.route_tickets WHERE ticket_id=?",
+                    ticketId
+            );
+            context.update(
+                    "DELETE FROM public.tickets WHERE id=?",
+                    ticketId
+            );
         }
 
-        context.delete(ticketsGroup)
-                .where(ticketsGroup.ID.eq(Math.toIntExact(id)))
-                .execute();
+        context.update("DELETE FROM public.tickets_group WHERE id=?", id);
     }
 
     public boolean isGroupExists(Long id) {
-        return this.context
-            .select(routeTickets.GROUP_ID)
-            .from(routeTickets)
-                .where(routeTickets.GROUP_ID.eq(Math.toIntExact(id)))
-                .fetch().isEmpty();
+        try {
+            this.context.queryForObject(
+                    "SELECT id FROM public.tickets_group WHERE id=?",
+                    Long.class,
+                    id
+            );
+
+            return true;
+        } catch (EmptyResultDataAccessException e) {
+            return false;
+        }
     }
 
     protected Long createGroupTicket() {
         return this.context
-                .insertInto(ticketsGroup, ticketsGroup.CREATION_DATE)
-                .values(LocalDateTime.now())
-                .returningResult(ticketsGroup.ID)
-                .fetchOne()
-                .into(long.class);
+                .queryForObject(
+                        "INSERT INTO public.tickets_group (creation_date) VALUES (?) RETURNING id",
+                        Long.class,
+                        LocalDateTime.now()
+                );
+    }
 
+    public TicketEntity getTicketBySitId(
+            Long sitId
+    ) {
+        try {
+            var ticket_id = this.context.queryForObject(
+                    "SELECT ticket_id FROM public.route_tickets WHERE sit_id=?",
+                    Integer.class,
+                    sitId
+            );
+
+            if(ticket_id == null) {
+                return null;
+            }
+
+            return context.queryForObject(
+                    "SELECT * FROM public.tickets WHERE id=?",
+                    new TicketEntityMapper(),
+                    ticket_id
+            );
+
+        } catch (EmptyResultDataAccessException e) {
+            return null;
+        }
     }
 }
